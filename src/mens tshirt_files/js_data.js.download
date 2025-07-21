@@ -1,0 +1,106 @@
+var rdvClid = document.getElementById('rdvScript').getAttribute('data-origin');
+var rdct2 = document.getElementById('rdvScript').getAttribute('data-ct');
+var rdct = 30;
+if (rdct2) rdct = rdct2;
+var rdclid = 'tkClid';
+if (rdvClid) rdclid = rdvClid;
+var clickidAdValue = '';
+function getAdUrlParameter(sParam = 'rclid') {
+  var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+      sURLVariables = sPageURL.split('&'),
+      sParameterName,
+      i;
+  for (i = 0; i < sURLVariables.length; i++) {
+    sParameterName = sURLVariables[i].split('=');
+
+    if (sParameterName[0] === sParam) {
+      return sParameterName[1] === undefined ? true : sParameterName[1];
+    }
+  }
+}
+function setAdClickIDValue(
+    name = rdclid,
+    value = getAdUrlParameter(),
+    exp_days = rdct,
+) {
+  var d = new Date();
+  d.setTime(d.getTime() + exp_days * 24 * 60 * 60 * 1000);
+  var expires = 'expires=' + d.toGMTString();
+  document.cookie = name + '=' + value + ';' + expires + ';path=/';
+}
+function getAdClickIDValue(name = rdclid) {
+  var cname = name + '=';
+  var decodedCookie = decodeURIComponent(document.cookie);
+  var ca = decodedCookie.split(';');
+  for (var i = 0; i < ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(cname) == 0) {
+      return c.substring(cname.length, c.length);
+    }
+  }
+  return '';
+}
+function checkAdCookie() {
+  var rclkid = getAdClickIDValue();
+  if (rclkid !== '') {
+    var itrackParam = getAdUrlParameter();
+    if (itrackParam !== undefined) {
+      if (rclkid != getAdUrlParameter()) {
+        setAdClickIDValue();
+      }
+    }
+  } else {
+    setAdClickIDValue();
+  }
+  clickidAdValue = getAdClickIDValue();
+}
+checkAdCookie();
+function getClientData({
+                         domain,
+                         offerId,
+                         txnID,
+                         amount,
+                         coupon = null,
+                         extra_info = null,
+                         category = null,
+                         user = null,
+                       }) {
+  console.log(clickidAdValue);
+  console.log(getAdClickIDValue());
+  if (clickidAdValue !== '') {
+    if (clickidAdValue !== 'undefined') {
+      var xhr = new XMLHttpRequest();
+      xhr.open(
+          'GET',
+          domain +
+          '/pixel/v2?offer_id=' +
+          offerId +
+          '&clkid=' +
+          clickidAdValue +
+          '&sale_amount=' +
+          amount +
+          '&trans_id=' +
+          txnID +
+          '&cf_2=' +
+          coupon +
+          '&cf_1=' +
+          user +
+          '&extra_info=' +
+          extra_info +
+          '&category=' +
+          category,
+      );
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          console.log(xhr.responseText);
+        } else {
+          console.log('Request failed.  Returned status of ' + xhr.status);
+        }
+      };
+      xhr.send();
+    }
+  }
+}
